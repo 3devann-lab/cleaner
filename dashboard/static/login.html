@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Dashboard sign in</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login">
+  <main class="card login-card">
+    <h1>Server dashboard</h1>
+    <p class="muted">Enter the dashboard password to continue.</p>
+    <form method="post" action="/login">
+      <label for="pw">Password</label>
+      <input id="pw" type="password" name="password" autocomplete="current-password" required autofocus>
+      <p class="error {{HIDDEN}}" role="alert">{{MESSAGE}}</p>
+      <button type="submit" class="primary">Sign in</button>
+    </form>
+  </main>
+</body>
+</html>
