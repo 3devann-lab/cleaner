@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Server dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Server dashboard</h1>
+    <div class="grow"></div>
+    <label class="sr-only" for="guild">Server</label>
+    <select id="guild"></select>
+    <button id="logout" class="ghost" type="button">Sign out</button>
+  </header>
+
+  <p id="empty" class="muted pad">Loading servers…</p>
+
+  <main id="main" class="hidden">
+    <section class="card" id="server-card">
+      <h2>Server icon</h2>
+      <div class="icon-row">
+        <img id="guild-icon" class="guild-icon hidden" alt="Current server icon" width="72" height="72">
+        <div id="guild-fallback" class="guild-icon fallback">?</div>
+        <div class="grow">
+          <div id="guild-name" class="strong"></div>
+          <p id="perm-warning" class="warn hidden"></p>
+          <div class="row">
+            <input id="icon-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+            <button id="icon-upload" class="primary" type="button" disabled>Upload new icon</button>
+            <button id="icon-remove" class="ghost danger" type="button">Remove icon</button>
+          </div>
+          <p class="muted small">PNG, JPEG, WebP or GIF up to 8 MB. Animated GIF icons need a boosted server.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="ai-card">
+      <h2>✨ Auto-organizer <span class="pill">Groq</span></h2>
+      <p class="muted">Groq proposes a new layout. <strong>Nothing changes on your server</strong> until you review the exact list of changes and press Apply, and you can edit anything Groq did first.</p>
+      <p id="ai-off" class="warn hidden">Set <code>GROQ_API_KEY</code> in Railway to turn this on.</p>
+      <div class="options">
+        <label><input type="checkbox" id="opt-spelling" checked> Fix spelling &amp; capitalisation</label>
+        <label><input type="checkbox" id="opt-emojis"> Add emojis</label>
+        <label><input type="checkbox" id="opt-reorder" checked> Reorder &amp; regroup channels</label>
+        <label><input type="checkbox" id="opt-new"> Create missing channels &amp; categories</label>
+        <label>Emoji style
+          <select id="opt-sep">
+            <option value="│" selected>💬│general</option>
+            <option value="┃">💬┃general</option>
+            <option value="・">💬・general</option>
+            <option value="-">💬-general</option>
+            <option value="">💬general</option>
+          </select>
+        </label>
+      </div>
+      <label for="opt-instructions">Tell Groq about your server (optional)</label>
+      <textarea id="opt-instructions" rows="3" maxlength="800" placeholder="e.g. A gaming community for Minecraft and Valorant. Keep staff channels at the bottom."></textarea>
+      <div class="row">
+        <button id="ai-run" class="primary" type="button">Generate suggestions</button>
+        <button id="ai-undo" class="ghost hidden" type="button">Undo suggestions</button>
+      </div>
+      <p id="ai-notes" class="note hidden"></p>
+    </section>
+
+    <section class="card" id="editor-card">
+      <div class="row between">
+        <h2>Channels</h2>
+        <div class="row">
+          <button id="add-category" class="ghost" type="button">+ Category</button>
+          <button id="reset" class="ghost" type="button">Reset to live</button>
+          <button id="review" class="primary" type="button">Preview &amp; apply</button>
+        </div>
+      </div>
+      <p class="muted small">Drag the ⋮⋮ handles to reorder or move channels between categories (or use the arrows and the move menu). Edit names in place. Nothing is saved to Discord until you apply.</p>
+      <div id="editor"></div>
+      <div id="trash-wrap" class="hidden">
+        <h3>Marked for deletion</h3>
+        <div id="trash"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+  <div id="overlay" class="overlay hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h2 id="modal-title"></h2>
+      <div id="modal-body"></div>
+      <div id="modal-actions" class="row end"></div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
