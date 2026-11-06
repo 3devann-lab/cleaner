@@ -248,8 +248,11 @@ def _guild(request: web.Request) -> discord.Guild:
         raise ApiError("Invalid server ID.", 400)
     if config.DASH_GUILD_IDS and int(gid) not in config.DASH_GUILD_IDS:
         raise ApiError("That server isn't enabled for the dashboard.", 403)
-    guild = _bot(request).get_guild(int(gid))
+    bot = _bot(request)
+    guild = bot.get_guild(int(gid))
     if guild is None:
+        if not bot.is_ready():
+            raise ApiError("The bot is still connecting to Discord. Try again in a few seconds.", 503)
         raise ApiError("The bot isn't in that server.", 404)
     return guild
 
@@ -292,9 +295,19 @@ async def api_session(request):
 
 
 async def api_guilds(request):
-    guilds = [g for g in _bot(request).guilds if not config.DASH_GUILD_IDS or g.id in config.DASH_GUILD_IDS]
+    bot = _bot(request)
+    guilds = [g for g in bot.guilds if not config.DASH_GUILD_IDS or g.id in config.DASH_GUILD_IDS]
     guilds.sort(key=lambda g: g.name.lower())
-    return web.json_response({"guilds": [guild_ops.guild_info(g) for g in guilds]})
+    # The dashboard starts BEFORE the bot finishes connecting, so an empty list can mean "not connected yet".
+    if guilds:
+        status = "ok"
+    elif not bot.is_ready():
+        status = "connecting"
+    elif bot.guilds:
+        status = "filtered"  # the bot is in servers, but DASH_GUILD_IDS excludes all of them
+    else:
+        status = "no_guilds"
+    return web.json_response({"guilds": [guild_ops.guild_info(g) for g in guilds], "status": status, "total": len(bot.guilds)})
 
 
 async def api_layout(request):
