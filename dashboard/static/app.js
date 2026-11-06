@@ -438,19 +438,40 @@
   }
 
   // -------------------------------------------------------------------- start
+  // The dashboard starts before the bot has connected to Discord, so keep retrying while it connects.
+  async function loadGuildList(attempt) {
+    const out = await api("/api/guilds");
+    const empty = $("#empty");
+    const select = $("#guild");
+    if (out.status === "connecting") {
+      if (attempt >= 20) {
+        empty.textContent = "The bot still hasn't connected to Discord. Check the Railway logs: the usual causes are the Server Members Intent being off in the Discord developer portal, or a wrong DISCORD_TOKEN.";
+        return;
+      }
+      empty.textContent = "The bot is still connecting to Discord… this page will keep retrying.";
+      setTimeout(() => loadGuildList(attempt + 1).catch((e) => { empty.textContent = e.message; }), 3000);
+      return;
+    }
+    if (!out.guilds.length) {
+      empty.textContent = out.status === "filtered"
+        ? `The bot is in ${out.total} server(s), but none of them are listed in DASH_GUILD_IDS. Add the server ID there, or remove that variable.`
+        : "The bot is connected but isn't in any server. Invite it using a link with the \"bot\" and \"applications.commands\" scopes.";
+      return;
+    }
+    const previous = select.value;
+    select.replaceChildren(...out.guilds.map((g) => el("option", { value: g.id, text: g.name })));
+    empty.classList.add("hidden");
+    loadGuild(select.value || previous);
+  }
+
   async function init() {
     try {
       const session = await api("/api/session");
       S.csrf = session.csrf; S.groq = session.groq;
       $("#ai-off").classList.toggle("hidden", S.groq);
       $("#ai-run").disabled = !S.groq;
-      const { guilds } = await api("/api/guilds");
-      const select = $("#guild");
-      select.replaceChildren(...guilds.map((g) => el("option", { value: g.id, text: g.name })));
-      if (!guilds.length) { $("#empty").textContent = "The bot isn't in any server that the dashboard can manage."; return; }
-      $("#empty").classList.add("hidden");
-      on(select, "change", () => loadGuild(select.value));
-      loadGuild(select.value);
+      on($("#guild"), "change", () => loadGuild($("#guild").value));
+      await loadGuildList(0);
     } catch (e) { $("#empty").textContent = e.message; }
   }
 
