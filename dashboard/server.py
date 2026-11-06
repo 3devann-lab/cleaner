@@ -66,6 +66,7 @@ class State:
         self.jobs = {}
         self.locks = defaultdict(asyncio.Lock)  # guild_id -> lock
         self.http = None  # shared aiohttp client session (Groq)
+        self.model = None  # model that actually worked (set when the configured one was retired)
 
 
 def client_ip(request: web.Request) -> str:
@@ -368,10 +369,17 @@ async def api_ai(request):
     if state.http is None:
         state.http = aiohttp.ClientSession()
     try:
-        raw = await groq_ai.request_layout(state.http, config.GROQ_API_KEY, config.GROQ_MODEL, groq_ai.build_messages(ai_input, opts, guild.name))
+        raw, used = await groq_ai.request_layout(
+            state.http, config.GROQ_API_KEY, state.model or config.GROQ_MODEL,
+            groq_ai.build_messages(ai_input, opts, guild.name), config.GROQ_TOKEN_BUDGET,
+        )
         merged, notes, merge_warnings = groq_ai.merge_ai_output(base, raw, amap, opts)
     except groq_ai.GroqError as exc:
         raise ApiError(str(exc), 502) from None
+    if used != config.GROQ_MODEL:
+        state.model = used  # remember it so later requests skip the failed model
+        log.warning("GROQ_MODEL=%s is unavailable; using %s", config.GROQ_MODEL, used)
+        notes = (notes + " " if notes else "") + f"(Groq no longer offers '{config.GROQ_MODEL}', so '{used}' was used. Set GROQ_MODEL={used} in Railway to make this permanent.)"
     merged["deleted"] = [{"id": d["id"]} for d in base["deleted"]]
     final = layout.validate_draft(merged, snap)
     log.info("Groq suggestion for guild %s: %s item(s)", guild.id, count)
