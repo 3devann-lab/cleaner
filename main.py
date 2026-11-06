@@ -65,6 +65,11 @@ class UtilityBot(commands.Bot):
 
     async def on_ready(self) -> None:
         log.info("Logged in as %s (%s) in %s servers", self.user, self.user.id, len(self.guilds))
+        if not self.guilds:
+            log.warning(
+                "The bot is connected but is NOT in any server. Invite it with a link that has the "
+                "'bot' and 'applications.commands' scopes (Developer Portal -> OAuth2 -> URL Generator)."
+            )
 
     async def close(self) -> None:
         if self.dashboard is not None:
@@ -80,7 +85,16 @@ async def main() -> None:
     discord.utils.setup_logging(level=getattr(logging, config.LOG_LEVEL, logging.INFO))
     bot = UtilityBot()
     async with bot:
-        await bot.start(config.TOKEN)
+        try:
+            await bot.start(config.TOKEN)
+        except discord.PrivilegedIntentsRequired:
+            raise SystemExit(
+                "Discord refused the connection: the 'Server Members Intent' is OFF. Turn it on at "
+                "Developer Portal -> your app -> Bot -> Privileged Gateway Intents -> SERVER MEMBERS INTENT, "
+                "save, then redeploy."
+            )
+        except discord.LoginFailure:
+            raise SystemExit("Discord rejected DISCORD_TOKEN. Reset the token in the Developer Portal and update the Railway variable.")
 
 
 if __name__ == "__main__":
