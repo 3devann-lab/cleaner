@@ -218,7 +218,7 @@ class Utility(commands.Cog):
     @remind.command(name="cancel", description="Cancel a reminder by its ID")
     @app_commands.describe(reminder_id="ID from /remind list")
     @sec(Level.EVERYONE)
-    async def remind_cancel(self, interaction: discord.Interaction, reminder_id: app_commands.Range[int, 1, 2**62]):
+    async def remind_cancel(self, interaction: discord.Interaction, reminder_id: app_commands.Range[int, 1, 2**53 - 1]):
         result = await self.bot.db.execute("DELETE FROM reminders WHERE id=$1 AND user_id=$2", reminder_id, interaction.user.id)
         await reply(interaction, content="Reminder cancelled." if not result.endswith(" 0") else "You have no reminder with that ID.")
 
@@ -279,14 +279,14 @@ class Utility(commands.Cog):
     @todo.command(name="done", description="Mark an item as done")
     @app_commands.describe(task_id="ID from /todo list")
     @sec(Level.EVERYONE)
-    async def todo_done(self, interaction: discord.Interaction, task_id: app_commands.Range[int, 1, 2**62]):
+    async def todo_done(self, interaction: discord.Interaction, task_id: app_commands.Range[int, 1, 2**53 - 1]):
         result = await self.bot.db.execute("UPDATE todos SET done = TRUE WHERE id=$1 AND user_id=$2", task_id, interaction.user.id)
         await reply(interaction, content="Marked as done." if not result.endswith(" 0") else "You have no item with that ID.")
 
     @todo.command(name="remove", description="Delete an item")
     @app_commands.describe(task_id="ID from /todo list")
     @sec(Level.EVERYONE)
-    async def todo_remove(self, interaction: discord.Interaction, task_id: app_commands.Range[int, 1, 2**62]):
+    async def todo_remove(self, interaction: discord.Interaction, task_id: app_commands.Range[int, 1, 2**53 - 1]):
         result = await self.bot.db.execute("DELETE FROM todos WHERE id=$1 AND user_id=$2", task_id, interaction.user.id)
         await reply(interaction, content="Removed." if not result.endswith(" 0") else "You have no item with that ID.")
 
