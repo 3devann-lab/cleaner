@@ -48,7 +48,12 @@ DASH_GUILD_IDS = _ids(os.getenv("DASH_GUILD_IDS", ""))
 
 # Groq (AI auto-organizer). Optional: without a key the editor still works, only the AI button is off.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip() or "llama-3.3-70b-versatile"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b").strip() or "openai/gpt-oss-120b"
+# Max tokens (input + output) per AI request. Groq's free tier allows ~8,000 per minute; raise this on a paid plan.
+try:
+    GROQ_TOKEN_BUDGET = max(2000, int(os.getenv("GROQ_TOKEN_BUDGET", "7500") or 7500))
+except ValueError:
+    GROQ_TOKEN_BUDGET = 7500
 
 
 def validate() -> None:
