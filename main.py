@@ -54,14 +54,18 @@ class UtilityBot(commands.Bot):
             self.dashboard = await start_dashboard(self)
 
         if config.SYNC_ON_START:
-            if config.DEV_GUILD_ID:
-                guild = discord.Object(id=config.DEV_GUILD_ID)
-                self.tree.copy_global_to(guild=guild)
-                synced = await self.tree.sync(guild=guild)
-                log.info("Synced %s commands to dev guild %s", len(synced), config.DEV_GUILD_ID)
-            else:
-                synced = await self.tree.sync()
-                log.info("Synced %s global commands", len(synced))
+            try:
+                if config.DEV_GUILD_ID:
+                    guild = discord.Object(id=config.DEV_GUILD_ID)
+                    self.tree.copy_global_to(guild=guild)
+                    synced = await self.tree.sync(guild=guild)
+                    log.info("Synced %s commands to dev guild %s", len(synced), config.DEV_GUILD_ID)
+                else:
+                    synced = await self.tree.sync()
+                    log.info("Synced %s global commands", len(synced))
+            except discord.HTTPException:
+                # Never let a command-sync problem stop the bot (or the dashboard) from starting.
+                log.exception("Slash command sync FAILED. The bot will keep running with the previously synced commands.")
 
     async def on_ready(self) -> None:
         log.info("Logged in as %s (%s) in %s servers", self.user, self.user.id, len(self.guilds))
