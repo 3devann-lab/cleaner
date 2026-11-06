@@ -170,7 +170,7 @@ class Community(commands.Cog):
     @poll.command(name="end", description="Close a poll now")
     @app_commands.describe(poll_id="Poll number (shown in /poll list)")
     @sec(Level.TRUSTED)
-    async def poll_end(self, interaction: discord.Interaction, poll_id: app_commands.Range[int, 1, 2**62]):
+    async def poll_end(self, interaction: discord.Interaction, poll_id: app_commands.Range[int, 1, 2**53 - 1]):
         poll = await self.bot.db.fetchrow("SELECT * FROM polls WHERE id=$1 AND guild_id=$2 AND NOT closed", poll_id, interaction.guild.id)
         if poll is None:
             return await reply(interaction, content="No open poll with that ID.")
@@ -278,7 +278,7 @@ class Community(commands.Cog):
     @giveaway.command(name="end", description="End a giveaway now")
     @app_commands.describe(giveaway_id="Giveaway number")
     @sec(Level.MOD)
-    async def giveaway_end(self, interaction: discord.Interaction, giveaway_id: app_commands.Range[int, 1, 2**62]):
+    async def giveaway_end(self, interaction: discord.Interaction, giveaway_id: app_commands.Range[int, 1, 2**53 - 1]):
         row = await self.bot.db.fetchrow("SELECT * FROM giveaways WHERE id=$1 AND guild_id=$2 AND NOT ended", giveaway_id, interaction.guild.id)
         if row is None:
             return await reply(interaction, content="No running giveaway with that ID.")
@@ -289,7 +289,7 @@ class Community(commands.Cog):
     @giveaway.command(name="reroll", description="Pick new winner(s) for an ended giveaway")
     @app_commands.describe(giveaway_id="Giveaway number")
     @sec(Level.MOD)
-    async def giveaway_reroll(self, interaction: discord.Interaction, giveaway_id: app_commands.Range[int, 1, 2**62]):
+    async def giveaway_reroll(self, interaction: discord.Interaction, giveaway_id: app_commands.Range[int, 1, 2**53 - 1]):
         row = await self.bot.db.fetchrow("SELECT * FROM giveaways WHERE id=$1 AND guild_id=$2 AND ended", giveaway_id, interaction.guild.id)
         if row is None:
             return await reply(interaction, content="No ended giveaway with that ID.")
