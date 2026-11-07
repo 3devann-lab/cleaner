@@ -299,7 +299,7 @@
   }
 
   async function loadGuild(gid) {
-    S.gid = gid;
+    S.gid = gid; clearPendingIcon();
     $("#main").classList.add("hidden");
     try {
       const out = await api(`/api/guilds/${gid}/layout`);
@@ -323,6 +323,49 @@
       toast(remove ? "Server icon removed." : "Server icon updated.", "ok");
     } catch (e) { toast(e.message, "err"); }
     up.disabled = !$("#icon-file").files.length;
+  }
+
+  let pendingIcon = null; // Blob fetched from a pasted link, waiting for the user to apply it
+  function clearPendingIcon() {
+    if (pendingIcon) URL.revokeObjectURL(pendingIcon.url);
+    pendingIcon = null; $("#icon-preview").classList.add("hidden");
+  }
+  async function fetchIconUrl() {
+    const url = $("#icon-url").value.trim();
+    if (!url) { toast("Paste an image link first.", "err"); return; }
+    const btn = $("#icon-fetch"); btn.disabled = true;
+    try {
+      const res = await fetch(`/api/guilds/${S.gid}/icon-fetch`, {
+        method: "POST", credentials: "same-origin",
+        headers: { "X-CSRF-Token": S.csrf, "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      if (res.status === 401) { location.href = "/login"; return; }
+      if (!res.ok) {
+        let msg = `Request failed (${res.status}).`;
+        try { msg = (await res.json()).error || msg; } catch (_) { /* ignore */ }
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      clearPendingIcon();
+      pendingIcon = { blob, url: URL.createObjectURL(blob) };
+      $("#icon-preview-img").src = pendingIcon.url;
+      $("#icon-preview").classList.remove("hidden");
+    } catch (e) { toast(e.message, "err"); }
+    btn.disabled = false;
+  }
+  async function applyPendingIcon() {
+    if (!pendingIcon) return;
+    const form = new FormData();
+    form.append("icon", pendingIcon.blob, "icon");
+    const btn = $("#icon-apply"); btn.disabled = true;
+    try {
+      const out = await api(`/api/guilds/${S.gid}/icon`, { method: "POST", form });
+      S.info = out.guild; renderServerCard();
+      clearPendingIcon(); $("#icon-url").value = "";
+      toast("Server icon updated.", "ok");
+    } catch (e) { toast(e.message, "err"); }
+    btn.disabled = false;
   }
 
   // ----------------------------------------------------------------------- AI
@@ -478,6 +521,10 @@
   on($("#logout"), "click", async () => { try { await api("/api/logout", { method: "POST" }); } catch (_) { /* ignore */ } location.href = "/login"; });
   on($("#icon-file"), "change", () => { $("#icon-upload").disabled = !$("#icon-file").files.length; });
   on($("#icon-upload"), "click", () => uploadIcon(false));
+  on($("#icon-fetch"), "click", fetchIconUrl);
+  on($("#icon-url"), "keydown", (e) => { if (e.key === "Enter") fetchIconUrl(); });
+  on($("#icon-apply"), "click", applyPendingIcon);
+  on($("#icon-discard"), "click", clearPendingIcon);
   on($("#icon-remove"), "click", () => { if (confirm("Remove this server's icon?")) uploadIcon(true); });
   on($("#ai-run"), "click", runAI);
   on($("#ai-undo"), "click", () => { if (S.prevDraft) { S.draft = decorate(S.prevDraft); S.prevDraft = null; render(); $("#ai-undo").classList.add("hidden"); $("#ai-notes").classList.add("hidden"); } });
