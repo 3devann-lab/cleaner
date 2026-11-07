@@ -148,22 +148,53 @@ async def apply_layout(bot, guild: discord.Guild, snap: dict, clean: dict, *, sy
         except discord.HTTPException as exc:
             note(False, label, _err(exc))
 
-    # 5. order + category membership in a single bulk request
-    moved = set()
+    # 5a. category membership. Discord allows only ONE channel's parent_id to change
+    #     per bulk request, so existing channels are moved one at a time.
+    moved = []
     for cat in clean["categories"]:
         for ch in cat["channels"]:
-            if ch["id"] and chans_idx[ch["id"]][1] != cat["id"]:
-                moved.add(ch["id"])
+            if ch["id"] and chans_idx[ch["id"]][1] != (cat["id"] or id_map.get(cat["tmp"])):
+                moved.append(ch)
     for ch in clean["uncategorized"]:
         if ch["id"] and chans_idx[ch["id"]][1] is not None:
-            moved.add(ch["id"])
-    payload = layout.plan_positions(clean, id_map, moved, sync_permissions)
-    if payload:
+            moved.append(ch)
+    payload = layout.plan_positions(clean, id_map)
+    target_parent = {str(p["id"]): p.get("parent_id") for p in payload}
+    created_by_id = {int(id_map[t]): obj for t, obj in created_cats.items() if t in id_map}
+    for ch in moved:
+        label = f'Move "{ch["name"]}" to its category'
+        channel = guild.get_channel(int(ch["id"]))
+        if channel is None:
+            note(False, label, "It no longer exists.")
+            continue
+        parent_id = target_parent.get(ch["id"])
+        parent = created_by_id.get(parent_id) or (guild.get_channel(parent_id) if parent_id else None)
+        if parent_id and parent is None:
+            note(False, label, "The target category is unavailable.")
+            continue
         try:
-            await bot.http.bulk_channel_update(guild.id, payload, reason=REASON)
-            note(True, f"Set the order and categories of {len(payload)} items")
+            await channel.edit(
+                category=parent,
+                sync_permissions=bool(sync_permissions and parent is not None),
+                reason=REASON,
+            )
+            note(True, label)
         except discord.HTTPException as exc:
-            note(False, "Set the order and categories", _err(exc))
+            note(False, label, _err(exc))
+
+    # 5b. order only: bulk updates WITHOUT parent_id, one request per parent
+    groups = {}
+    for p in payload:
+        groups.setdefault(p.get("parent_id"), []).append({"id": p["id"], "position": p["position"]})
+    done = 0
+    for entries in groups.values():
+        try:
+            await bot.http.bulk_channel_update(guild.id, entries, reason=REASON)
+            done += len(entries)
+        except discord.HTTPException as exc:
+            note(False, "Set the order", _err(exc))
+    if done:
+        note(True, f"Set the order of {done} items")
     return results
 
 
