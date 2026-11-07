@@ -32,7 +32,16 @@
             <button id="icon-upload" class="primary" type="button" disabled>Upload new icon</button>
             <button id="icon-remove" class="ghost danger" type="button">Remove icon</button>
           </div>
-          <p class="muted small">PNG, JPEG, WebP or GIF up to 8 MB. Animated GIF icons need a boosted server.</p>
+          <div class="row">
+            <input id="icon-url" type="url" class="grow" placeholder="…or paste an image link (https://…/image.png)" maxlength="2000" autocomplete="off">
+            <button id="icon-fetch" class="ghost" type="button">Preview link</button>
+          </div>
+          <div id="icon-preview" class="row hidden">
+            <img id="icon-preview-img" class="guild-icon" alt="Preview of the new icon" width="72" height="72">
+            <button id="icon-apply" class="primary" type="button">Apply as server icon</button>
+            <button id="icon-discard" class="ghost" type="button">Discard</button>
+          </div>
+          <p class="muted small">PNG, JPEG, WebP or GIF up to 8 MB. Links must point directly at the image file. Animated GIF icons need a boosted server.</p>
         </div>
       </div>
     </section>
