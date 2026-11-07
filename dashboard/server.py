@@ -31,7 +31,7 @@ from aiohttp import web
 import discord
 
 import config
-from dashboard import groq_ai, guild_ops, layout
+from dashboard import fetch, groq_ai, guild_ops, layout
 
 log = logging.getLogger("dashboard")
 
@@ -457,6 +457,31 @@ def _image_type(raw: bytes):
     return None
 
 
+async def api_icon_fetch(request):
+    """Download an image from a pasted URL so the user can preview it before applying it."""
+    guild = _guild(request)
+    _need_perm(guild, "manage_guild")
+    now = time.time()
+    calls = request["session"].setdefault("icon_fetch", deque())
+    while calls and now - calls[0] > 60:
+        calls.popleft()
+    if len(calls) >= 10:
+        raise ApiError("Slow down: too many link downloads this minute.", 429)
+    calls.append(now)
+    data = await _json(request)
+    url = data.get("url")
+    if not isinstance(url, str):
+        raise ApiError("Paste a valid image link.")
+    try:
+        raw = await fetch.fetch_image_bytes(url, MAX_ICON_BYTES)
+    except fetch.FetchError as exc:
+        raise ApiError(str(exc)) from None
+    kind = _image_type(raw)
+    if kind is None:
+        raise ApiError("That link isn't a PNG, JPEG, GIF or WebP image. Use a direct link to the image file.")
+    return web.Response(body=raw, content_type="image/" + kind, headers={"Cache-Control": "no-store"})
+
+
 async def api_icon(request):
     guild = _guild(request)
     _need_perm(guild, "manage_guild")
@@ -503,6 +528,7 @@ async def start_dashboard(bot) -> web.AppRunner:
         web.post("/api/guilds/{gid}/ai", api_ai),
         web.post("/api/guilds/{gid}/apply", api_apply),
         web.post("/api/guilds/{gid}/icon", api_icon),
+        web.post("/api/guilds/{gid}/icon-fetch", api_icon_fetch),
         web.get("/api/jobs/{job}", api_job),
     ])
     runner = web.AppRunner(app, access_log=None)
